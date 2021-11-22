@@ -32,8 +32,6 @@ library(tidytext)
 library(stringr)
 library(stringi)
 
-if (interactive()) {
-  
   ui = dashboardPage(skin = "blue",
                      # skin = "green",
                      dashboardHeader(title = "QUIC"),
@@ -862,6 +860,4 @@ if (interactive()) {
     
   }
   
-  shinyApp(ui, server)
-  
-}
+  shinyApp(ui = ui, server = server)
