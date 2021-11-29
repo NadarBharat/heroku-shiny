@@ -590,7 +590,7 @@ server = function(input, output, session) {
         reqLDA = pagesLDA()
         #Calculating Document length for LDAvis
         doc.length = sapply(reqLDA, function(x)
-            sum(x[2,]))
+            sum(x[2, ]))
     })
     
     #Term Frequency
@@ -733,7 +733,7 @@ server = function(input, output, session) {
         })
         doc_with_topic$cleaned_text = as.character(doc_with_topic$cleaned_text)
         ID = paste(input$ID)
-        doc_with_topic = doc_with_topic[doc_with_topic[, ID] %in% names(corpusClean$text),]
+        doc_with_topic = doc_with_topic[doc_with_topic[, ID] %in% names(corpusClean$text), ]
         ntopics = input$nTopics
         pcf = input$percentcf
         
