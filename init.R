@@ -3,4 +3,4 @@
 # Example R code to install packages if not already installed
 #
 
-helpers.installPackages('shiny', 'shinydashboard', 'shinyWidgets', 'tosca', 'LDAvis', 'servr', 'NLP', 'tm', 'udpipe', 'dplyr', 'tidytext', 'DT', 'lubridate', 'readxl', 'writexl', 'tidyr', 'tidytext', 'xfun', 'syuzhet', 'sentimentr', 'stringr', 'stringi', 'Unicode', 'utf8', 'textrank', 'lexRankr', 'text2vec')
+helpers.installPackages('shiny', 'shinydashboard', 'shinyWidgets', 'shinycssloaders', 'shinyBS', 'shinyalert', 'tosca', 'LDAvis', 'servr', 'tm', 'lexRankr', 'textmineR', 'dplyr', 'DT', 'lubridate', 'readxl', 'writexl', 'tidyr', 'xfun', 'syuzhet', 'sentimentr', 'NLP', 'tidytext', 'stringr', 'stringi', ‘ggplot2')
