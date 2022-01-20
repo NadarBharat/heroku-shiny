@@ -7,32 +7,32 @@
 #    http://shiny.rstudio.com/
 #
 
-library(shiny)
-library(shinydashboard)
-library(shinyWidgets)
-library(shinycssloaders)
-library(shinyBS)
-library(shinyalert)
-library(tosca)
-library(LDAvis)
-library(servr)
-library(tm)
-library(lexRankr)
-library(textmineR)
-library(dplyr)
-library(DT)
-library(lubridate)
-library(readxl)
-library(writexl)
-library(tidyr)
-library(xfun)
-library(syuzhet)
-library(sentimentr)
-library(NLP)
-library(tidytext)
-library(stringr)
-library(stringi)
-library(ggplot2)
+suppressMessages(library(shiny))
+suppressMessages(library(shinydashboard))
+suppressMessages(library(shinyWidgets))
+suppressMessages(library(shinycssloaders))
+suppressMessages(library(shinyBS))
+suppressMessages(library(shinyalert))
+suppressMessages(library(tosca))
+suppressMessages(library(LDAvis))
+suppressMessages(library(servr))
+suppressMessages(library(tm))
+suppressMessages(library(lexRankr))
+suppressMessages(library(textmineR))
+suppressMessages(library(dplyr))
+suppressMessages(library(DT))
+suppressMessages(library(lubridate))
+suppressMessages(library(readxl))
+suppressMessages(library(writexl))
+suppressMessages(library(tidyr))
+suppressMessages(library(xfun))
+suppressMessages(library(syuzhet))
+suppressMessages(library(sentimentr))
+suppressMessages(library(NLP))
+suppressMessages(library(tidytext))
+suppressMessages(library(stringr))
+suppressMessages(library(stringi))
+suppressMessages(library(ggplot2))
 
 ui = dashboardPage(
     skin = "blue",
@@ -95,13 +95,13 @@ ui = dashboardPage(
                             "nTopics",
                             value = 7,
                             min = 3,
-                            max = 500,
+                            max = 50,
                             label = tags$span(
                                 "Number of Topics",
                                 tags$i(
                                     class = "glyphicon glyphicon-info-sign",
                                     style = "color:#0072B2;",
-                                    title = "Here, default topic number is 7. However, we can increase the topic number as much as we want"
+                                    title = "Here, default topic number is 7. However, we can increase the topic number to 50"
                                 )
                             )
                         ),
@@ -158,6 +158,8 @@ ui = dashboardPage(
                         ),
                         tags$hr(),
                         actionButton(inputId = "GoButton", label = "Go!!!",  icon("sync")),
+                        # tags$hr(),
+                        # downloadButton("LDAproboutput", "Topic-Word %"),
                         tags$hr(),
                         numericInput(
                             "percentcf",
@@ -169,7 +171,7 @@ ui = dashboardPage(
                                 tags$i(
                                     class = "glyphicon glyphicon-info-sign",
                                     style = "color:#0072B2;",
-                                    title = "Extracting "
+                                    title = "Extract document with 0.25% topic probablity or more by mentioning topic probabilty at Percent Cut-off."
                                 )
                             )
                         ),
@@ -177,9 +179,15 @@ ui = dashboardPage(
                         
                     ),
                     mainPanel(
-                        withSpinner(plotOutput('coherence_plot'), type = 6),
+                        plotOutput('coherence_plot'),
                         tags$br(),
-                        visOutput('visChart')
+                        conditionalPanel(
+                            condition = "input.GoButton > 0",
+                            style = "display: none;",
+                            withSpinner(visOutput('visChart'), type = 6, hide.ui = T)
+                        )
+                        
+                        
                     )
                 )),
         tabItem(tabName = "sentiment",
@@ -209,16 +217,21 @@ ui = dashboardPage(
                             "nTopics_lsa",
                             value = 7,
                             min = 3,
-                            max = 500,
+                            max = 50,
                             label = tags$span(
                                 "Number of Topics",
                                 tags$i(
                                     class = "glyphicon glyphicon-info-sign",
                                     style = "color:#0072B2;",
-                                    title = "Here, default topic number is 7. However, we can increase the topic number as much as we want"
+                                    title = "Here, default topic number is 7. However, we can increase the topic number to 50"
                                 )
                             )
                         ),
+                        tags$hr(),
+                        actionButton(inputId = "LSAGoButton", label = "Go!!!",  icon("sync")),
+                        # tags$hr(),
+                        # downloadButton("LSAproboutput", "Topic Probability"),
+                        tags$hr(),
                         numericInput(
                             "percentcf_lsa",
                             min = 0.01,
@@ -229,18 +242,24 @@ ui = dashboardPage(
                                 tags$i(
                                     class = "glyphicon glyphicon-info-sign",
                                     style = "color:#0072B2;",
-                                    title = "Extracting "
+                                    title = "Extract document with 0.25% topic probablity or more by mentioning topic probabilty at Percent Cut-off."
                                 )
                             )
                         ),
                         downloadButton("LSAoutput", "Download Output")
                     ),
-                    mainPanel(fluidRow(fluidRow(
-                        column(12,
-                               withSpinner(plotOutput(
-                                   "lsa_coherence_plot"
-                               ), type = 6))
-                    )))
+                    mainPanel(fluidRow(
+                        column(
+                            12,
+                            align = "center",
+                            conditionalPanel(
+                                condition = "input.LSAGoButton > 0",
+                                style = "display: none;",
+                                withSpinner(plotOutput("lsa_coherence_plot", width = "100%"), type = 6)
+                            )
+                            
+                        )
+                    ))
                 )),
         tabItem(tabName = "summarization",
                 fluidPage(
@@ -323,24 +342,21 @@ server = function(input, output, session) {
         choices1 = colnames(datafile_org())
         updateSelectInput(session,
                           "ID",
-                          choices =  choices1,
-                          selected = "id")
+                          choices =  choices1)
     })
     
     observe({
         choices1 = colnames(datafile_org())
         updateSelectInput(session,
                           "Date",
-                          choices =  choices1,
-                          selected = "date")
+                          choices =  choices1)
     })
     
     observe({
         choices1 = colnames(datafile_org())
         updateSelectInput(session,
                           "Text",
-                          choices =  choices1,
-                          selected = "text")
+                          choices =  choices1)
     })
     
     #Coherence_LDA
@@ -438,30 +454,42 @@ server = function(input, output, session) {
         return(model_list)
     })
     
-    output$coherence_plot = renderPlot({
-        model_list = model_list()
-        coherence_mat = data.frame(
-            k = sapply(model_list, function(x)
-                nrow(x$phi)),
-            coherence = sapply(model_list, function(x)
-                mean(x$coherence)),
-            stringsAsFactors = FALSE
-        )
-        
-        ggplot(coherence_mat, aes(x = k, y = coherence)) +
-            geom_point() +
-            geom_line(group = 1) +
-            ggtitle("Best Topic by Coherence Score") +
-            scale_x_continuous(breaks = seq(1, 1000, 1)) +
-            ylab("Coherence") +
-            theme(
-                panel.grid.major = element_blank(),
-                panel.grid.minor = element_blank(),
-                panel.background = element_blank(),
-                axis.line = element_line(colour = "black")
+    observeEvent(input$GoButton, {
+        output$coherence_plot = renderPlot({
+            model_list = model_list()
+            coherence_mat = data.frame(
+                topics = sapply(model_list, function(x)
+                    nrow(x$phi)),
+                coherence = sapply(model_list, function(x)
+                    mean(x$coherence)),
+                stringsAsFactors = FALSE
             )
-        
+            
+            ggplot(coherence_mat, aes(x = topics, y = coherence)) +
+                geom_point() +
+                geom_line(group = 1) +
+                ggtitle("Best Topic by Coherence Score") +
+                scale_x_continuous(breaks = seq(1, 1000, 1)) +
+                ylab("Coherence") +
+                theme(
+                    panel.grid.major = element_blank(),
+                    panel.grid.minor = element_blank(),
+                    panel.background = element_blank(),
+                    axis.line = element_line(colour = "black")
+                )
+            
+        })
     })
+    
+    addPopover(
+        session,
+        "coherence_plot",
+        "Coherence Score",
+        content = paste0(
+            "<p>Provides guidance to chose the optimal number of Topics, the highest coherence score would be the optimal number of topic to chose.</p>"
+        ),
+        trigger = 'click'
+    )
     
     #Corpus Creation
     toscacorpus = reactive({
@@ -527,10 +555,11 @@ server = function(input, output, session) {
             terms = unlist(strsplit(input$add_stopword, ", ?"))
             stopw = c(stopw, terms)
         }
+        
         #Cleaning our text column
         textClean = cleanTexts(
             text = corpus$text,
-            sw = stopw ,
+            sw = stopw,
             lowercase = TRUE,
             rmPunctuation = TRUE,
             rmNumbers = TRUE,
@@ -544,6 +573,8 @@ server = function(input, output, session) {
         #Summary of our corpus
         print(corpusClean)
         summary(corpusClean)
+        
+        return(corpusClean)
     })
     
     #Creating Word table
@@ -635,40 +666,6 @@ server = function(input, output, session) {
     })
     
     #LDAvis Output
-    observeEvent(input$datafile, {
-        output$visChart = renderVis({
-            # progress = Progress$new(session, min=0, max=1)
-            # on.exit(progress$close())
-            #
-            # progress$set(message = 'Calculation in progress',
-            #              detail = 'This may take a while...')
-            #
-            
-            isolate({
-                nterms    = input$nTerms
-                lda_model = LDAresult()
-                FinalOutput = finaloutput()
-            })
-            
-            with(
-                FinalOutput,
-                createJSON(
-                    phi = phi,
-                    theta = theta,
-                    doc.length = doc.length,
-                    vocab = vocab,
-                    term.frequency = term.frequency,
-                    R = nterms,
-                    mds.method = jsPCA,
-                    plot.opts = list(xlab = "PC1", ylab = "PC2"),
-                    reorder.topics = FALSE
-                )
-            )
-            
-        })
-        
-    })
-    #Updated LDAvis Output
     observeEvent(input$GoButton, {
         output$visChart = renderVis({
             # progress = Progress$new(session, min=0, max=1)
@@ -713,6 +710,9 @@ server = function(input, output, session) {
         corpusClean = corpusClean()
         doc_with_topic = datafile_org()
         Text = paste(input$Text)
+        isolate({
+            lda_model = LDAresult()
+        })
         doc_with_topic$cleaned_text = lapply(doc_with_topic[, Text], function(x) {
             x = tolower(x)  # Transform to lowercase
             x = gsub("@\\w+", "", x) #Remove Username
@@ -733,17 +733,15 @@ server = function(input, output, session) {
         })
         doc_with_topic$cleaned_text = as.character(doc_with_topic$cleaned_text)
         ID = paste(input$ID)
-        doc_with_topic = doc_with_topic[doc_with_topic[, ID] %in% names(corpusClean$text), ]
+        doc_with_topic = doc_with_topic[as.character(doc_with_topic[, ID]) %in% names(corpusClean$text), ]
         ntopics = input$nTopics
         pcf = input$percentcf
         
         doc_with_topic$topic = apply(doc_topic_dist[1:ntopics], 1, function(x)
             names(which(x > pcf)))
         doc_with_topic2 = unnest(doc_with_topic, topic)
-        isolate({
-            lda_model = LDAresult()
-        })
         topwords = as.list(as.data.frame(topWords(lda_model$topics, numWords = 10)))
+        important_words = as.data.frame(importance(lda_model$topics))
         doc_with_topic2$topic_keywords = topwords[match(doc_with_topic2$topic, names(topwords))]
         doc_with_topic2$topic_keywords = as.character(doc_with_topic2$topic_keywords)
         return(doc_with_topic2)
@@ -751,7 +749,7 @@ server = function(input, output, session) {
     
     output$downloadtopicfile = downloadHandler(
         filename = function() {
-            paste("Topic Document", Sys.Date(), ".xlsx", sep = "-")
+            paste("LDA_Output_", Sys.Date(), ".xlsx", sep = "")
         },
         content = function(file) {
             doc_with_topic = doc_with_topic()
@@ -759,22 +757,39 @@ server = function(input, output, session) {
         }
     )
     
+    doc_with_prob_lda = reactive({
+        isolate({
+            lda_model = LDAresult()
+        })
+        important_words = importance(lda_model$topics)
+        topic_word_df = as.data.frame(important_words)
+        return(topic_word_df)
+    })
+    
+    output$LDAproboutput = downloadHandler(
+        filename = function() {
+            paste("LDA_Probability_Score_", Sys.Date(), ".xlsx", sep = "")
+        },
+        content = function(file) {
+            write_xlsx(doc_with_prob_lda(), file)
+        }
+    )
+    
+    
     # LSA
     #Column Selection
     observe({
         choices1 = colnames(datafile_org())
         updateSelectInput(session,
                           "ID_lsa",
-                          choices =  choices1,
-                          selected = "id")
+                          choices =  choices1)
     })
     
     observe({
         choices1 = colnames(datafile_org())
         updateSelectInput(session,
                           "Text_lsa",
-                          choices =  choices1,
-                          selected = "text")
+                          choices =  choices1)
     })
     # DTM
     dtm = reactive({
@@ -934,7 +949,7 @@ server = function(input, output, session) {
     
     output$LSAoutput = downloadHandler(
         filename = function() {
-            paste("Topic Document", Sys.Date(), ".xlsx", sep = "-")
+            paste("LSA_Output_", Sys.Date(), ".xlsx", sep = "")
         },
         content = function(file) {
             doc_with_topic = doc_with_topic_lsa()
@@ -942,18 +957,91 @@ server = function(input, output, session) {
         }
     )
     
-    observeEvent(input$datafile, {
+    doc_with_prob_lsa = reactive({
+        # progress = Progress$new(session, min=0, max=1)
+        # on.exit(progress$close())
+        #
+        # progress$set(message = 'Calculation in progress',
+        #              detail = 'This may take a while...')
+        #
+        LSAresult = LSAresult()
+        dtm = dtm()
+        # Get the top terms of each topic
+        LSAresult$top_terms = GetTopTerms(phi = LSAresult$phi, M = 10)
+        
+        # Get the prevalence of each topic
+        # You can make this discrete by applying a threshold, say 0.05, for
+        # topics in/out of docuemnts.
+        LSAresult$prevalence = colSums(LSAresult$theta) / sum(LSAresult$theta) * 100
+        
+        # textmineR has a naive topic labeling tool based on probable bigrams
+        LSAresult$labels = LabelTopics(
+            assignments = LSAresult$theta > 0.05,
+            dtm = dtm,
+            M = 1
+        )
+        
+        # put them together, with coherence into a summary table
+        LSAresult$summary = data.frame(
+            topic = rownames(LSAresult$phi),
+            # label = LSAresult$labels,
+            # coherence = round(LSAresult$coherence, 3),
+            # prevalence = round(LSAresult$prevalence,3),
+            top_terms = apply(LSAresult$top_terms, 2, function(x) {
+                paste(x, collapse = ", ")
+            }),
+            stringsAsFactors = FALSE
+        )
+        
+        LSAmodel_summ = LSAresult$summary
+        
+        doc_topic_dist = as.data.frame(LSAresult$theta)
+        doc_with_topic = datafile_org()
+        Text = paste(input$Text_lsa)
+        doc_with_topic$cleaned_text = lapply(doc_with_topic[, Text], function(x) {
+            x = tolower(x)  # Transform to lowercase
+            x = gsub("@\\w+", "", x) #Remove Username
+            x = gsub("[[:punct:]]", "", x) # Remove Punctuation
+            x = gsub("http\\w+", "", x) #Remove URLS
+            x = gsub("https\\w+", "", x) #Remove URLS
+            x = gsub("[ |\t]{2,}", "", x) #Remove Tabs
+            # x = gsub("na na","", x)  #Remove "na na"
+            # x = gsub("na","", x)  #Remove "na"
+            x = gsub("[^0-9A-Za-z///' ]", "'", x)  #Remove special chars
+            x = gsub("'", "", x)  #Remove '
+            x = gsub("[[:digit:]]+", "", x)  #Remove digits
+            x = gsub(pattern = "[/]", replacement = " ", x)  #Replace / with space
+            x = gsub("^[[:space:]]+", "", x)  #Remove white space at the beginning of a sting
+            x = gsub("[[:space:]]+$", "", x)  #Remove white space at the end of a string
+            x = stri_trim(x, side = c("both", "left", "right"))  #Remove white space from start and end of a string
+            x = str_squish(x)  # Reduce repeated white space inuniqueide a string
+        })
+        doc_with_topic$cleaned_text = as.character(doc_with_topic$cleaned_text)
+        doc_with_prob  = merge(doc_with_topic, doc_topic_dist, by = "row.names")
+        return(doc_with_prob)
+    })
+    
+    output$LSAproboutput = downloadHandler(
+        filename = function() {
+            paste("LSA_Probability_Score_", Sys.Date(), ".xlsx", sep = "")
+        },
+        content = function(file) {
+            write_xlsx(doc_with_prob_lsa(), file)
+        }
+    )
+    
+    observeEvent(input$LSAGoButton, {
         output$lsa_coherence_plot = renderPlot({
             LSAresult = LSAresult()
             coherence <-
                 data.frame(
-                    topic = rownames(LSAresult$phi),
+                    k = rownames(LSAresult$phi),
                     coherence = round(LSAresult$coherence, 3),
                     stringsAsFactors = FALSE
                 )
-            coherence$k = str_extract_all(coherence$topic, '[0-9]+')
-            coherence$k = as.numeric(coherence$k)
-            ggplot(coherence, aes(x = k, y = coherence)) +
+            coherence$topics = str_extract_all(coherence$k, '[0-9]+')
+            coherence$topics = as.numeric(coherence$topics)
+            ggplot(coherence, aes(x = topics, y = coherence)) +
                 geom_point() +
                 geom_line(group = 1) +
                 ggtitle("Best Topic by Coherence Score") +
@@ -968,6 +1056,17 @@ server = function(input, output, session) {
             
         })
     })
+    
+    addPopover(
+        session,
+        "lsa_coherence_plot",
+        "Coherence Score",
+        content = paste0(
+            "<p>Provides guidance to chose the optimal number of Topics, the highest coherence score would be the optimal number of topic to chose.</p>"
+        ),
+        trigger = 'click'
+    )
+    
     # Summarization
     datafileforsumm = reactive({
         inFile = input$datafileforsumm
@@ -997,16 +1096,14 @@ server = function(input, output, session) {
         choices1 = colnames(datafileforsumm())
         updateSelectInput(session,
                           "textforsumm",
-                          choices =  choices1,
-                          selected = "ctext")
+                          choices =  choices1)
     })
     
     observe({
         choices1 = colnames(datafileforsumm())
         updateSelectInput(session,
                           "idforsumm",
-                          choices =  choices1,
-                          selected = "ID")
+                          choices =  choices1)
     })
     
     summdata = eventReactive(input$btn, {
@@ -1092,11 +1189,12 @@ server = function(input, output, session) {
     
     output$downloadsum = downloadHandler(
         filename = function() {
-            paste("Data_Summary",
+            paste("Data_Summary_Output_",
                   input$second,
+                  "_",
                   Sys.Date(),
                   ".xlsx",
-                  sep = "-")
+                  sep = "")
         },
         content = function(file) {
             df = summdata()
