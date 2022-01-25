@@ -292,7 +292,7 @@ ui = dashboardPage(
 
 server = function(input, output, session) {
     options(shiny.maxRequestSize = 5000 * 1024 ^ 2) # memory.limit(size = 500mb)
-    
+    # options(scipen = 999)
     shinyOptions(progress.style = "old")
     
     autoInvalidate = reactiveTimer(10000)
@@ -741,10 +741,14 @@ server = function(input, output, session) {
             names(which(x > pcf)))
         doc_with_topic2 = unnest(doc_with_topic, topic)
         topwords = as.list(as.data.frame(topWords(lda_model$topics, numWords = 10)))
-        important_words = as.data.frame(importance(lda_model$topics))
         doc_with_topic2$topic_keywords = topwords[match(doc_with_topic2$topic, names(topwords))]
         doc_with_topic2$topic_keywords = as.character(doc_with_topic2$topic_keywords)
-        return(doc_with_topic2)
+        imp_word = as.data.frame(importance(lda_model$topics))
+        imp_df = tibble::rowid_to_column(imp_word, "topic")
+        imp_df$topic = paste0('V', imp_df$topic)
+        doc_with_topic3 = doc_with_topic2 %>%
+            full_join(imp_df, by = "topic")
+        return(doc_with_topic3)
     })
     
     output$downloadtopicfile = downloadHandler(
@@ -943,8 +947,15 @@ server = function(input, output, session) {
         doc_with_topic2 = unnest(doc_with_topic, topic)
         
         doc_with_topic3 = inner_join(doc_with_topic2, LSAmodel_summ, by = "topic")
+        imp_word = as.data.frame(LSAresult$phi)
         
-        return(doc_with_topic3)
+        imp_df = tibble::rowid_to_column(imp_word, "topic")
+        imp_df$topic = paste0('t_', imp_df$topic)
+        
+        doc_with_topic4 = doc_with_topic3 %>%
+            full_join(imp_df, by = "topic")
+        
+        return(doc_with_topic4)
     })
     
     output$LSAoutput = downloadHandler(
@@ -1096,14 +1107,16 @@ server = function(input, output, session) {
         choices1 = colnames(datafileforsumm())
         updateSelectInput(session,
                           "textforsumm",
-                          choices =  choices1)
+                          choices =  choices1,
+                          selected = "ctext")
     })
     
     observe({
         choices1 = colnames(datafileforsumm())
         updateSelectInput(session,
                           "idforsumm",
-                          choices =  choices1)
+                          choices =  choices1,
+                          selected = "ID")
     })
     
     summdata = eventReactive(input$btn, {
